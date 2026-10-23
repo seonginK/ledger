@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>활동비 장부</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#3f6352">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="활동비 장부">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>window.ledgerReady=new Promise(function(r){window.__ledgerResolve=r});</script>
+<script src="config.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one narrow column (max 560px) — summary first, then tabs: 확인 / 입력·내역 / 현금 계산. Sticky tab bar. */
+:root{
+  --bg:#f3f6f4; --surface:#ffffff; --line:#d8e0db; --fg:#1f2a25; --muted:#5f6f67;
+  --accent:#3f6352; --accent-soft:#e3ece7; --accent-fg:#ffffff;
+  --in:#fff7cf; --good:#2e7d32; --good-soft:#e5f3e6; --bad:#b3261e; --bad-soft:#fde8e6; --pink:#ad1457; --pink-soft:#fbe7ef;
+  --font:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121815; --surface:#1a221e; --line:#2c3832; --fg:#e6ede9; --muted:#9aaba2;
+  --accent:#7fb39b; --accent-soft:#22302a; --accent-fg:#0f1512;
+  --in:#2e2a17; --good:#7bc77f; --good-soft:#1d2e1f; --bad:#ff8a80; --bad-soft:#3a1f1d; --pink:#f48fb1; --pink-soft:#33202a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121815; --surface:#1a221e; --line:#2c3832; --fg:#e6ede9; --muted:#9aaba2;
+  --accent:#7fb39b; --accent-soft:#22302a; --accent-fg:#0f1512;
+  --in:#2e2a17; --good:#7bc77f; --good-soft:#1d2e1f; --bad:#ff8a80; --bad-soft:#3a1f1d; --pink:#f48fb1; --pink-soft:#33202a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 96px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+h1{font-size:19px;margin:0;font-weight:700;text-wrap:balance}
+.chip{font-size:11px;font-weight:600;letter-spacing:.04em;padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.month{display:flex;align-items:center;gap:6px}
+.month button{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;width:34px;height:34px;font-size:16px;cursor:pointer}
+.month strong{min-width:96px;text-align:center}
+.hero{background:var(--accent);color:var(--accent-fg);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.hero .lab{font-size:13px;opacity:.85}
+.hero .big{font-size:30px;font-weight:700;line-height:1.15}
+.hero .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border-top:1px solid color-mix(in srgb,var(--accent-fg) 25%,transparent);padding-top:10px}
+.hero .row div{min-width:0}
+.hero .row .v{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.hero .row .k{font-size:11.5px;opacity:.85}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-block:6px}
+.tabs button{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:9px 4px;font:inherit;font-weight:600;font-size:14px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+h2{font-size:15px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 small{font-weight:400;color:var(--muted);font-size:12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--accent-soft);border-radius:10px;padding:10px 12px}
+.stat .k{font-size:12px;color:var(--muted)} .stat .v{font-size:18px;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11.5px;color:var(--muted);font-weight:500;text-align:right;padding:4px 2px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 2px;border-bottom:1px solid var(--line);text-align:right}
+tr.tot td{font-weight:700;border-bottom:none}
+.tblwrap{overflow-x:auto}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:999px}
+.b-bad{background:var(--bad-soft);color:var(--bad)} .b-good{background:var(--good-soft);color:var(--good)} .b-pink{background:var(--pink-soft);color:var(--pink)}
+form{display:flex;flex-direction:column;gap:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--surface);color:var(--fg);padding:10px;font:inherit;font-weight:600;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);min-width:0}
+input,select{font:inherit;font-size:16px;color:var(--fg);background:var(--in);border:1px solid var(--line);border-radius:9px;padding:10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;border-radius:10px;padding:12px;font:inherit;font-weight:700;cursor:pointer;background:var(--accent);color:var(--accent-fg)}
+.btn.ghost{background:var(--surface);color:var(--fg);border:1px solid var(--line)}
+.btn.danger{background:var(--bad);color:#fff}
+.btn.sm{padding:6px 10px;font-size:13px;font-weight:600}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.msg{font-size:13px;padding:8px 10px;border-radius:8px}
+.msg.ok{background:var(--good-soft);color:var(--good)} .msg.err{background:var(--bad-soft);color:var(--bad)}
+ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+ul.list li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+ul.list li:last-child{border-bottom:0}
+.d{font-size:13px;color:var(--muted);text-align:center;line-height:1.2}
+.d b{display:block;font-size:17px;color:var(--fg)}
+.t{min-width:0}.t .a{font-weight:600;overflow-wrap:anywhere}.t .s{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.amt{text-align:right;font-weight:700}
+.amt.plus{color:var(--good)} .amt.pay{color:var(--muted);font-weight:500}
+.empty{color:var(--muted);text-align:center;padding:18px 8px;font-size:14px}
+.inline{background:var(--accent-soft);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;grid-column:1/-1;cursor:default}
+.cashrow{display:grid;grid-template-columns:78px 1fr minmax(0,1.2fr);gap:8px;align-items:center}
+.cashrow .dn{font-weight:600}
+.cashrow .sum{text-align:right}
+.status{font-weight:700;text-align:center;padding:10px;border-radius:10px}
+.fab{position:fixed;left:0;right:0;bottom:0;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(to top,var(--bg) 70%,transparent);z-index:6}
+.fab .inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+textarea{font:inherit;font-size:12px;width:100%;min-height:90px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px}
+@media (prefers-reduced-motion:no-preference){.btn,.tabs button{transition:background .15s}}
+.b-gray{background:var(--accent-soft);color:var(--muted)} .b-blue{background:var(--accent-soft);color:var(--accent)}
+.todo{display:flex;flex-direction:column;gap:8px}
+.todo li{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:default}
+.todo li:last-child{border-bottom:0}
+.todo li span{min-width:0;overflow-wrap:anywhere}
+[hidden]{display:none !important}
+.tabs{grid-template-columns:repeat(4,1fr) !important}
+.tabs button{font-size:13.5px !important;padding:9px 2px !important}
+.help h3{font-size:14.5px;margin:4px 0 0}
+.help p,.help li{font-size:14px;line-height:1.6;margin:0}
+.help ol,.help ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.help table td,.help table th{text-align:left;font-size:13px;vertical-align:top}
+.help .step{background:var(--accent-soft);border-radius:10px;padding:10px 12px}
+.advrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.advrow>input:first-child{grid-column:1/-1}
+.advrow input,.advrow select{font-size:14px;padding:8px}
+.xbtn{border:1px solid var(--line);background:var(--surface);color:var(--bad);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px}
+.link{background:none;border:0;color:var(--accent);font:inherit;font-size:13.5px;font-weight:600;padding:0;cursor:pointer;text-align:left;align-self:flex-start}
+
+.gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.gate .card{max-width:380px;width:100%;text-align:center;align-items:center}
+.gate img{width:72px;height:72px;border-radius:18px}
+.gate p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.gbtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:46px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--fg);font:inherit;font-weight:600;cursor:pointer}
+.gbtn svg{width:18px;height:18px}
+.acct{font-size:13.5px;color:var(--muted);overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <section class="card">
+    <img src="icon-192.png" alt="">
+    <h1 id="gateTitle">활동비 장부</h1>
+    <p id="gateMsg">불러오는 중…</p>
+    <button type="button" class="gbtn" id="gLogin" hidden><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Google 계정으로 로그인</button>
+    <button type="button" class="btn ghost sm" id="gLogout" hidden>다른 계정으로 로그인</button>
+  </section>
+</div>
+<div class="wrap">
+  <header>
+    <div style="display:flex;align-items:center;gap:8px"><h1>활동비 장부</h1><span class="chip">앱</span></div>
+    <div class="month">
+      <button id="mPrev" aria-label="이전 달">‹</button><strong id="mLabel" class="num">—</strong><button id="mNext" aria-label="다음 달">›</button>
+    </div>
+  </header>
+
+  <div class="hero" aria-live="polite">
+    <div><div class="lab">현재 시재 (가지급 후)</div><div class="big num" id="hSijae">—</div></div>
+    <div class="row">
+      <div><div class="k">잔여예산 (가지급 전)</div><div class="v num" id="hRemain">—</div></div>
+      <div><div class="k">가지급 합계</div><div class="v num" id="hAdv">—</div></div>
+      <div><div class="k">개인카드 미입금</div><div class="v num" id="hCard">—</div></div>
+    </div>
+  </div>
+  <div id="dbNotice" class="msg err" hidden></div>
+  <section class="card" id="setupCard" hidden>
+    <h2>처음 시작하기</h2>
+    <p class="note" style="margin:0">장부가 아직 비어 있어요. 백업 파일(.json)을 불러오면 지금까지의 장부(설정·내역)가 그대로 들어와요.</p>
+    <label class="btn sm" style="text-align:center;cursor:pointer">백업 파일 고르기<input type="file" id="setupFile" accept=".json,application/json" hidden></label>
+    <div id="setupMsg" class="msg" hidden></div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-check" aria-selected="true">확인</button>
+    <button role="tab" id="tab-entry" aria-selected="false">입력·내역</button>
+    <button role="tab" id="tab-cash" aria-selected="false">현금 계산</button>
+    <button role="tab" id="tab-help" aria-selected="false">도움말</button>
+  </nav>
+
+  <!-- 확인 -->
+  <div id="view-check" style="display:flex;flex-direction:column;gap:14px">
+    <section class="card">
+      <h2>이번 달 <small id="mRange"></small></h2>
+      <div class="pair">
+        <div class="stat"><div class="k">수입</div><div class="v num" id="sIncome">—</div></div>
+        <div class="stat"><div class="k">지출</div><div class="v num" id="sExpense">—</div></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>개인카드 미입금 <small>사람별 · 지금까지</small></h2>
+      <div class="tblwrap"><table>
+        <thead><tr><th>이름</th><th>미입금 건수</th><th>미입금</th></tr></thead>
+        <tbody id="cardBody"><tr><td colspan="3" class="empty">불러오는 중…</td></tr></tbody>
+      </table></div>
+      <p class="note">개인카드로 쓴 내역에 입금일을 적으면 입금완료가 되고 여기서 빠져요.</p>
+    </section>
+    <section class="card">
+      <h2>통장별 잔액 <small>지금 기준</small></h2>
+      <div class="tblwrap"><table>
+        <thead><tr><th>통장·현금</th><th>장부 잔액</th><th>가지급</th><th>통장 잔액</th></tr></thead>
+        <tbody id="acctBody"><tr><td colspan="4" class="empty">불러오는 중…</td></tr></tbody>
+      </table></div>
+      <p class="note" id="acctNote">통장 잔액은 은행 앱 잔고와 비교하는 숫자예요. 개인카드 대금은 입금일을 적은 만큼 입금 통장에서 빠져요.</p>
+      <div id="unclassMsg" class="msg err" hidden></div>
+    </section>
+    <section class="card">
+      <h2>가지급 현황 <small>아직 정산 안 된 돈</small></h2>
+      <div class="tblwrap" id="advView"><table>
+        <thead><tr><th>내용</th><th>지급 통장</th><th>금액</th></tr></thead>
+        <tbody id="advBody"><tr><td colspan="3" class="empty">불러오는 중…</td></tr></tbody>
+      </table></div>
+      <div id="advEdit" hidden style="display:flex;flex-direction:column;gap:8px">
+        <div id="advRows" style="display:flex;flex-direction:column;gap:6px"></div>
+        <button type="button" class="link" id="advAdd">+ 가지급 한 줄 추가</button>
+        <div id="advMsg" class="msg" hidden></div>
+        <div class="actions"><button type="button" class="btn sm" id="advSave">저장</button><button type="button" class="btn ghost sm" id="advCancel">취소</button></div>
+      </div>
+      <div class="actions" id="advEditBtnRow"><button type="button" class="btn ghost sm" id="advEditBtn">가지급 고치기 (엑셀과 같게)</button></div>
+      <p class="note">엑셀 월 탭 맨 아래 "가지급 현황"과 같게 맞춰 두면 현재 시재가 엑셀과 같아져요.</p>
+    </section>
+  </div>
+
+  <!-- 입력·내역 -->
+  <div id="view-entry" hidden style="display:flex;flex-direction:column;gap:14px">
+    <section class="card" id="formCard">
+      <h2 id="formTitle">새 내역 적기</h2>
+      <form id="entryForm" novalidate>
+        <div class="seg" role="group" aria-label="구분">
+          <button type="button" id="kindExp" aria-pressed="true">지출</button>
+          <button type="button" id="kindInc" aria-pressed="false">수입</button>
+        </div>
+        <div class="grid2">
+          <label>날짜<input type="date" id="fDate" required></label>
+          <label>금액(원)<input id="fAmt" inputmode="numeric" autocomplete="off" placeholder="0" class="num"></label>
+        </div>
+        <label>항목<select id="fItem"></select></label>
+        <button type="button" class="link" id="addItemBtn">+ 목록에 없는 항목 추가</button>
+        <div class="inline" id="addItemBox" hidden>
+          <label>새 항목 이름<input id="newItem" autocomplete="off" placeholder="예) 교통비"></label>
+          <div class="actions"><button type="button" class="btn sm" id="addItemSave">항목 추가</button><button type="button" class="btn ghost sm" id="addItemCancel">취소</button></div>
+        </div>
+        <label>적요<input id="fDesc" autocomplete="off" placeholder="예) 택시비 15200+15600"></label>
+        <label><span id="acctLabel">지출구분 (통장·현금 또는 개인카드 쓴 사람)</span><select id="fAcct"></select></label>
+        <button type="button" class="link" id="addCardBtn">+ 개인카드 쓴 사람 추가</button>
+        <div class="inline" id="addCardBox" hidden>
+          <label>이름<input id="newCard" autocomplete="off" placeholder="예) 홍길동"></label>
+          <div class="actions"><button type="button" class="btn sm" id="addCardSave">사람 추가</button><button type="button" class="btn ghost sm" id="addCardCancel">취소</button></div>
+        </div>
+        <label id="paidWrap" hidden>입금일 (입금해 줬으면)<input type="date" id="fPaid"></label>
+        <div id="formMsg" class="msg" hidden></div>
+        <div class="actions">
+          <button type="submit" class="btn" id="saveBtn">저장</button>
+          <button type="button" class="btn ghost" id="cancelEdit" hidden>취소</button>
+        </div>
+        <div class="actions" id="delRow" hidden>
+          <button type="button" class="btn danger sm" id="delBtn">이 내역 삭제</button>
+          <button type="button" class="btn danger sm" id="delYes" hidden>정말 삭제</button>
+        </div>
+      </form>
+    </section>
+    <section class="card">
+      <h2>이번 달 내역 <small id="listCount"></small></h2>
+      <div id="listMsg" class="msg" hidden></div>
+      <ul class="list" id="entryList"><li class="empty" style="display:block">불러오는 중…</li></ul>
+      <p class="note"><span class="badge b-gray">엑셀 ○행</span> 이미 엑셀에 있는 내역이에요(여기서는 입금 처리만 돼요). <span class="badge b-blue">새 내역</span> 핸드폰에서 적고 아직 엑셀에 안 옮긴 내역이에요(눌러서 고칠 수 있어요).</p>
+    </section>
+    <section class="card">
+      <h2>엑셀로 옮기기 <small id="pendCount"></small></h2>
+      <p class="note">엑셀 해당 월 탭의 빈 줄에 두 번 붙여 넣어요.<br>① <b>일 칸(C열)</b>을 누르고 붙여넣기 → 일·항목·적요·수입·지출<br>② 같은 줄 <b>지출구분 칸(I열)</b>을 누르고 붙여넣기 → 지출구분·입금일<br>다 옮겼으면 ③을 눌러 표시해 두세요.</p>
+      <div class="actions">
+        <button type="button" class="btn ghost sm" id="copyA">① 일~지출 복사</button>
+        <button type="button" class="btn ghost sm" id="copyB">② 지출구분·입금일 복사</button>
+      </div>
+      <div class="actions"><button type="button" class="btn sm" id="markDone">③ 엑셀에 옮겼어요</button><button type="button" class="btn sm" id="markYes" hidden>네, 옮겼어요</button></div>
+      <div class="actions"><button type="button" class="btn ghost sm" id="undoT" hidden></button><button type="button" class="btn danger sm" id="undoTYes" hidden>네, 되돌릴게요</button></div>
+      <div id="copyMsg" class="msg" hidden></div>
+      <textarea id="copyBox" readonly hidden aria-label="복사할 내용"></textarea>
+      <h2 style="margin-top:6px">엑셀에서 고칠 것 <small id="fixCount"></small></h2>
+      <ul class="list todo" id="fixList"><li class="empty" style="display:block">없어요</li></ul>
+    </section>
+    <section class="card" id="importCard">
+      <h2>엑셀에서 가져오기 <small id="impMonth"></small></h2>
+      <p class="note">엑셀에 직접 적은 내역을 이 화면에 맞춰요. 위에서 고른 달 기준이에요.<br>
+        ① 엑셀 해당 월 탭에서 <b>A열(No.)부터 J열(입금일)까지</b>, 10행부터 마지막 거래 줄까지 선택해서 복사해요(빈 줄이 섞여 있어도 괜찮아요).<br>
+        ② 아래 칸에 붙여 넣고 <b>미리보기</b> → 엑셀 "이번 달 합계"와 같은지 보고 <b>맞추기</b>를 눌러요.</p>
+      <textarea id="impBox" aria-label="엑셀에서 복사한 내용 붙여넣기" placeholder="여기에 붙여넣기 (길게 눌러 붙여넣기)"></textarea>
+      <div class="actions">
+        <button type="button" class="btn ghost sm" id="impPreview">미리보기</button>
+        <button type="button" class="btn ghost sm" id="impClear">지우기</button>
+      </div>
+      <div id="impResult" class="msg" hidden></div>
+      <div class="actions"><button type="button" class="btn sm" id="impGo" hidden>이 달 내역을 엑셀과 맞추기</button><button type="button" class="btn danger sm" id="impYes" hidden>네, 맞출게요</button></div>
+      <div class="actions"><button type="button" class="btn ghost sm" id="undoI" hidden></button><button type="button" class="btn danger sm" id="undoIYes" hidden>네, 되돌릴게요</button></div>
+      <div id="undoIMsg" class="msg" hidden></div>
+    </section>
+  </div>
+
+  <!-- 현금 계산 -->
+  <div id="view-cash" hidden style="display:flex;flex-direction:column;gap:14px">
+    <section class="card">
+      <h2>현금 시재 확인 <small>권종별 수량</small></h2>
+      <div id="cashRows" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="tblwrap"><table>
+        <tbody>
+          <tr><td>실제 현금 합계</td><td class="num" id="cTotal">0원</td></tr>
+          <tr><td>장부상 현금 (가지급 후)</td><td class="num" id="cBook">—</td></tr>
+          <tr class="tot"><td>차액 (실제 − 장부)</td><td class="num" id="cDiff">—</td></tr>
+        </tbody>
+      </table></div>
+      <div class="status" id="cStatus">수량을 입력하세요</div>
+      <div class="actions"><button type="button" class="btn ghost sm" id="cashReset">수량 모두 지우기</button><button type="button" class="btn danger sm" id="cashResetYes" hidden>정말 지우기</button></div>
+      <p class="note">수량은 자동 저장돼서 컴퓨터에서 열어도 같은 숫자가 보여요.</p>
+    </section>
+  </div>
+
+  <!-- 도움말 -->
+  <div id="view-help" hidden class="help" style="display:flex;flex-direction:column;gap:14px">
+    <section class="card">
+      <h2>이 페이지는</h2>
+      <p><b>엑셀이 공식 장부(원본)</b>이고, 이 페이지는 핸드폰에서 <b>적고 확인하는 보조 장부</b>예요. 둘은 자동으로 연결되지 않아서, 핸드폰에서 적은 건 <b>엑셀로 옮기기</b>, 엑셀에서 적은 건 <b>엑셀에서 가져오기</b>로 맞춰요.</p>
+      <p>컴퓨터와 핸드폰에서 같은 주소로 열고 같은 구글 계정으로 로그인하면 같은 내용이 보여요.</p>
+    </section>
+
+    <section class="card">
+      <h2>매일 적기</h2>
+      <ol>
+        <li>아래 <b>+ 지출 적기</b>(또는 + 수입 적기)를 눌러요.</li>
+        <li>날짜·금액·항목·적요를 적고, <b>지출구분</b>에서 돈이 나간 통장·현금을 골라요. 개인카드로 썼으면 <b>쓴 사람 이름</b>을 골라요.</li>
+        <li>목록에 없는 항목이나 사람은 칸 아래 <b>"+ … 추가"</b>로 바로 넣어요. 엑셀 목록에도 같은 이름을 넣어야 해서 <b>"엑셀에서 고칠 것"</b>에 적어 둬요.</li>
+        <li>저장한 새 내역은 눌러서 고치거나 지울 수 있어요. 엑셀에 이미 있는 내역(엑셀 ○행)은 엑셀에서 고쳐요.</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>개인카드로 썼을 때</h2>
+      <ol>
+        <li>지출구분에서 쓴 사람 이름을 고르면 빨간 <b>미입금</b>이 붙어요. 쓴 날 바로 지출로 잡혀요.</li>
+        <li>법인통장에서 그 사람에게 입금해 주면, 그 내역의 <b>입금 처리</b>에서 날짜만 넣어요 → <b>입금완료</b>.</li>
+        <li>엑셀에 이미 있는 줄이면 엑셀 입금일 칸에도 적어야 해서 "엑셀에서 고칠 것"에 나와요. 엑셀에 적고 <b>고쳤어요</b>를 눌러요.</li>
+        <li>"개인카드 입금" 줄은 따로 적지 않아요(두 번 빠져요).</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>핸드폰 → 엑셀로 옮기기</h2>
+      <p class="step">복사·붙여넣기는 <b>같은 기기 안에서만</b> 돼요. 엑셀이 컴퓨터에 있으면 이 페이지도 <b>컴퓨터에서 열어서</b> 하세요.</p>
+      <ol>
+        <li>입력·내역 탭 <b>① 일~지출 복사</b> → 엑셀 그 달 탭 빈 줄의 <b>일 칸(C열)</b>에 붙여넣기</li>
+        <li><b>② 지출구분·입금일 복사</b> → <b>같은 줄의 지출구분 칸(I열)</b>에 붙여넣기</li>
+        <li>엑셀에 잘 들어갔는지 본 뒤 <b>③ 엑셀에 옮겼어요</b> → 다음부터 다시 복사되지 않아요.</li>
+        <li>③을 잘못 눌렀으면 바로 아래 <b>"방금 표시 되돌리기"</b>를 눌러요.</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>엑셀 → 핸드폰 가져오기</h2>
+      <ol>
+        <li>페이지 맨 위에서 <b>맞출 달</b>을 골라요.</li>
+        <li>엑셀 그 달 탭에서 <b>A열(No.)~J열(입금일)</b>, 10행부터 마지막 거래 줄까지 선택해 복사해요.</li>
+        <li>"엑셀에서 가져오기" 칸에 붙여 넣고 <b>미리보기</b> → 수입·지출 합계가 엑셀 "이번 달 합계" 줄과 같은지 확인 → <b>맞추기</b>.</li>
+        <li>핸드폰에만 있는 내역(아직 안 옮긴 것)은 그대로 남아요. 잘못 맞췄으면 <b>"마지막 가져오기 되돌리기"</b>를 눌러요.</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2>엑셀과 시재가 맞는지 확인하기</h2>
+      <p class="step">먼저 <b>엑셀에서 가져오기</b>로 그 달을 맞추고, 핸드폰에만 있는 내역(옮길 내역)이 없는 상태에서 비교하세요.</p>
+      <div class="tblwrap"><table>
+        <thead><tr><th>핸드폰</th><th>엑셀에서 보는 곳</th></tr></thead>
+        <tbody>
+          <tr><td>잔여예산 (가지급 전)</td><td>월 탭 맨 위 <b>잔여예산</b></td></tr>
+          <tr><td>현재 시재 (가지급 후)</td><td>맨 위 오른쪽 분홍 <b>현재 시재</b> (= 맨 아래 가지급 합계 줄의 가지급 후 잔액)</td></tr>
+          <tr><td>가지급 합계</td><td>맨 아래 <b>가지급 현황</b>의 가지급 합계</td></tr>
+          <tr><td>개인카드 미입금</td><td>맨 위 <b>카드 미입금</b> / 사람별은 개인카드 정산 표 <b>누적 미입금</b></td></tr>
+          <tr><td>통장별 통장 잔액</td><td>통장별 잔액 표 오른쪽 분홍 <b>통장 잔액(은행)</b></td></tr>
+          <tr><td>현금 계산 탭</td><td>맨 아래 오른쪽 <b>현금 시재 확인</b> (같은 계산)</td></tr>
+        </tbody>
+      </table></div>
+      <h3>실제 돈과 맞추기</h3>
+      <ol>
+        <li><b>통장:</b> 확인 탭 "통장별 잔액"의 통장 잔액을 각 은행 앱 잔고와 비교해요.</li>
+        <li><b>현금:</b> 현금 계산 탭에 권종별 수량을 넣으면 "✔ 장부와 일치" 또는 "⚠ ○원 부족/많음"이 나와요.</li>
+        <li><b>개인카드:</b> 사람별 미입금이 실제로 아직 안 갚은 돈과 같은지 봐요.</li>
+      </ol>
+      <h3>숫자가 다를 때 확인할 것</h3>
+      <ul>
+        <li>핸드폰에만 있는 내역이 있나요? (입력·내역 탭 "옮길 내역 ○건")</li>
+        <li>엑셀에서 적은 내역을 가져왔나요? (그 달 <b>엑셀에서 가져오기</b>)</li>
+        <li>가지급이 엑셀과 같나요? 다르면 확인 탭 <b>가지급 고치기</b>로 엑셀 맨 아래 가지급 현황과 같게 맞춰요.</li>
+        <li>지출구분이 빈 내역이 있나요? 있으면 통장별 잔액에서 빠져요(확인 탭 빨간 안내). 엑셀에서 채우고 다시 가져오세요.</li>
+        <li>엑셀 월 탭 오른쪽 위 <b>점검</b> 칸이 "⚠ 확인 필요"인가요? 엑셀 쪽 누락부터 고쳐요.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>알아두면 좋은 점</h2>
+      <ul>
+        <li>입력한 내용은 바로 저장돼요(인터넷 연결 필요). 따로 저장 버튼은 없어요(내역 저장 버튼 제외).</li>
+        <li>앱 주소를 다른 사람이 알아도, 허락한 구글 계정이 아니면 장부를 열 수 없어요.</li>
+        <li>매달 결재받은 뒤에는 엑셀 파일 사본을 하나 저장해 두면 안전해요.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>핸드폰 홈 화면에 앱으로 두기</h2>
+      <ul>
+        <li><b>아이폰(사파리):</b> 아래 가운데 공유 버튼 → <b>홈 화면에 추가</b></li>
+        <li><b>갤럭시(크롬·삼성 인터넷):</b> 오른쪽 위(아래) 메뉴 ⋮ → <b>홈 화면에 추가</b> 또는 <b>앱 설치</b></li>
+        <li>홈 화면 아이콘으로 처음 열 때 한 번 더 구글 로그인을 할 수 있어요.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>백업</h2>
+      <p>장부 전체(설정·내역·현금 수량)를 파일 하나로 저장해요. 매달 결재가 끝나면 한 번씩 저장해 두세요.</p>
+      <div class="actions"><button type="button" class="btn sm" id="backupBtn">백업 파일 저장</button></div>
+      <div id="backupMsg" class="msg" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2>계정</h2>
+      <p class="acct" id="whoami">—</p>
+      <div class="actions"><button type="button" class="btn ghost sm" id="logoutBtn">로그아웃</button></div>
+    </section>
+  </div>
+</div>
+
+<div class="fab"><div class="inner">
+  <button class="btn" id="fabExp">+ 지출 적기</button>
+  <button class="btn ghost" id="fabInc">+ 수입 적기</button>
+</div></div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const won=n=>(Math.round(n||0)).toLocaleString('ko-KR')+'원';
+  const signed=n=>(n<0?'−':'')+Math.abs(Math.round(n)).toLocaleString('ko-KR')+'원';
+  const pad=n=>String(n).padStart(2,'0');
+  const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+  const md=d=>{ if(!d) return ''; const p=d.split('-'); return Number(p[1])+'/'+Number(p[2]) };
+  const DENOMS=[50000,10000,5000,1000,500,100,50,10];
+
+  let db=null, cfg=null, entries=[], cash={counts:{}}, meta={};
+  let month=today().slice(0,7), kind='exp', editingId=null, payOpen=null;
+
+  /* ---------- 엑셀과 같은 계산 규칙 ----------
+     잔여예산 = 시작 잔액 + 시작 가지급 − 개인카드 시작 미입금 + 수입 − 지출 (지출구분과 상관없이 모든 내역)
+     개인카드 사용분 = 쓴 날 지출, 입금 통장 장부에서 빠짐 / 입금일이 없으면 미입금(그만큼 실제 통장에는 남아 있음)
+     통장 잔액 = 장부 − 가지급 (+ 입금 통장은 미입금만큼 더함), 현재 시재 = 잔여예산 − 가지급 */
+  function calc(){
+    if(!cfg) return null;
+    const accts=cfg.accounts||[], cards=(cfg.cards||[]).map(c=>c.name), pay=cfg.payAccount;
+    const cardStart=(cfg.cards||[]).reduce((s,c)=>s+Number(c.start||0),0);
+    const book={};
+    accts.forEach(a=>{book[a.name]=Number(a.start||0)});
+    (cfg.openingAdvances||[]).forEach(v=>{ if(v.account in book) book[v.account]+=Number(v.amount||0) });
+    if(pay in book) book[pay]-=cardStart;
+    const person={}; (cfg.cards||[]).forEach(c=>{person[c.name]={amt:Number(c.start||0),n:0}});
+    let remain=accts.reduce((s,a)=>s+Number(a.start||0),0)+(cfg.openingAdvances||[]).reduce((s,v)=>s+Number(v.amount||0),0)-cardStart;
+    let unclass=0, unclassN=0;
+    entries.forEach(e=>{
+      const inc=Number(e.income||0), exp=Number(e.expense||0);
+      remain+=inc-exp;
+      if(e.account in book){ book[e.account]+=inc-exp }
+      else if(cards.includes(e.account)){
+        if(pay in book) book[pay]-=exp;
+        if(!e.paidDate){ person[e.account].amt+=exp; person[e.account].n++ }
+      } else if(inc||exp){ unclass+=inc+exp; unclassN++ }
+    });
+    const unpaid=Object.values(person).reduce((s,p)=>s+p.amt,0);
+    const adv={}; let advTotal=0;
+    (cfg.advances||[]).forEach(v=>{ adv[v.account]=(adv[v.account]||0)+Number(v.amount||0); advTotal+=Number(v.amount||0) });
+    const inMonth=entries.filter(e=>(e.date||'').slice(0,7)===month);
+    return {accts,cards,pay,book,adv,advTotal,remain,sijae:remain-advTotal,unpaid,person,unclass,unclassN,inMonth,
+      mIncome:inMonth.reduce((s,e)=>s+Number(e.income||0),0), mExpense:inMonth.reduce((s,e)=>s+Number(e.expense||0),0)};
+  }
+
+  /* ---------- 화면 ---------- */
+  function row(cells){const tr=document.createElement('tr');cells.forEach((t,i)=>{const td=document.createElement('td');td.textContent=t;if(i>0)td.className='num';tr.append(td)});return tr}
+  function emptyRow(tb,cols,text){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=cols;td.className='empty';td.textContent=text;tr.append(td);tb.append(tr)}
+  function render(){
+    const [y,m]=month.split('-').map(Number);
+    $('mLabel').textContent=y+'년 '+m+'월'; $('impMonth').textContent=y+'년'+m+'월 탭';
+    $('mRange').textContent=y+'.'+pad(m)+'.01 ~ '+y+'.'+pad(m)+'.'+pad(new Date(y,m,0).getDate());
+    const c=calc(); if(!c) return;
+    $('hSijae').textContent=won(c.sijae); $('hRemain').textContent=won(c.remain);
+    $('hAdv').textContent=won(c.advTotal); $('hCard').textContent=won(c.unpaid);
+    $('sIncome').textContent=won(c.mIncome); $('sExpense').textContent=won(c.mExpense);
+    // 사람별
+    const cb=$('cardBody'); cb.textContent='';
+    const ppl=Object.entries(c.person).filter(([,p])=>p.amt||p.n);
+    if(!ppl.length) emptyRow(cb,3,'미입금이 없어요 ✔');
+    ppl.forEach(([n,p])=>cb.append(row([n,p.n+'건',won(p.amt)])));
+    if(ppl.length){const t=row(['합계','',won(c.unpaid)]);t.className='tot';cb.append(t)}
+    // 통장
+    const tb=$('acctBody'); tb.textContent='';
+    let tB=0,tA=0,tR=0;
+    c.accts.forEach(a=>{
+      const b=c.book[a.name]||0, v=c.adv[a.name]||0, real=b-v+(a.name===c.pay?c.unpaid:0); tB+=b; tA+=v; tR+=real;
+      tb.append(row([a.name+(a.name===c.pay?' ·입금통장':''), won(b), v?won(v):'—', won(real)]));
+    });
+    const tr=row(['합계',won(tB),won(tA),won(tR)]); tr.className='tot'; tb.append(tr);
+    const um=$('unclassMsg'); um.hidden=!c.unclassN;
+    if(c.unclassN) um.textContent='지출구분이 없는 내역 '+c.unclassN+'건('+won(c.unclass)+')은 통장별 잔액에서 빠져 있어요. 엑셀에서 지출구분을 채우면 맞아져요.';
+    // 가지급
+    const ab=$('advBody'); ab.textContent='';
+    const advs=(cfg.advances||[]);
+    if(!advs.length) emptyRow(ab,3,'아직 정산 안 된 가지급이 없어요');
+    advs.forEach(v=>ab.append(row([v.text, v.account||'—', won(v.amount)])));
+    const at=row(['합계','',won(c.advTotal)]); at.className='tot'; ab.append(at);
+    renderList(c); renderTransfer(); renderCash(c); renderUndo();
+  }
+
+  function renderList(c){
+    const ul=$('entryList'); ul.textContent='';
+    const list=[...c.inMonth].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||((b.createdAt||0)-(a.createdAt||0)));
+    $('listCount').textContent=list.length?list.length+'건':'';
+    if(!list.length){ const li=document.createElement('li'); li.className='empty'; li.style.display='block';
+      li.textContent='이번 달 내역이 아직 없어요. 아래 "+ 지출 적기"로 첫 내역을 적어 보세요.'; ul.append(li); return }
+    list.forEach(e=>{
+      const isCard=c.cards.includes(e.account)&&Number(e.expense);
+      const li=document.createElement('li'); li.tabIndex=0;
+      const d=document.createElement('div'); d.className='d';
+      const b=document.createElement('b'); b.textContent=Number((e.date||'').slice(8,10))||''; d.append(b, Number((e.date||'').slice(5,7))+'월');
+      const t=document.createElement('div'); t.className='t';
+      const a=document.createElement('div'); a.className='a'; a.textContent=(e.item||(Number(e.income)?'수입':'항목 없음'))+(e.desc?' · '+e.desc:'');
+      const s=document.createElement('div'); s.className='s'; s.textContent=(e.account||'지출구분 없음')+' ';
+      if(isCard){ const bd=document.createElement('span'); bd.className='badge '+(e.paidDate?'b-good':'b-bad'); bd.textContent=e.paidDate?'입금완료 '+md(e.paidDate):'미입금'; s.append(bd,' ') }
+      const tag=document.createElement('span'); tag.className='badge '+(e.inExcel?'b-gray':'b-blue'); tag.textContent=e.inExcel?(e.excelRow?'엑셀 '+e.excelRow+'행':'엑셀 반영됨'):'새 내역'; s.append(tag);
+      t.append(a,s);
+      const m=document.createElement('div'); m.className='amt num';
+      if(Number(e.income)){ m.classList.add('plus'); m.textContent='+'+won(e.income) } else m.textContent='−'+won(e.expense);
+      li.append(d,t,m);
+      const open=()=>{ if(e.inExcel){ listMsg('엑셀에 이미 있는 내역이라 여기서는 고칠 수 없어요. 엑셀에서 고쳐 주세요.'); return } startEdit(e) };
+      li.addEventListener('click',ev=>{ if(ev.target.closest('.inline')) return; open() });
+      li.addEventListener('keydown',ev=>{ if(ev.key==='Enter') open() });
+      if(isCard&&!e.paidDate){
+        const box=document.createElement('div'); box.className='inline';
+        if(payOpen===e.id){
+          const dt=document.createElement('input'); dt.type='date'; dt.value=today(); dt.id='payDate-'+e.id;
+          const l=document.createElement('label'); l.textContent=(cfg.payAccount||'입금 통장')+'에서 입금해 준 날'; l.append(dt);
+          const go=document.createElement('button'); go.type='button'; go.className='btn sm'; go.textContent='입금완료로 표시';
+          const no=document.createElement('button'); no.type='button'; no.className='btn ghost sm'; no.textContent='취소';
+          const acts=document.createElement('div'); acts.className='actions'; acts.append(go,no);
+          box.append(l,acts);
+          go.addEventListener('click',()=>markPaid(e,dt.value));
+          no.addEventListener('click',()=>{ payOpen=null; render() });
+        } else {
+          const bt=document.createElement('button'); bt.type='button'; bt.className='btn ghost sm'; bt.textContent='입금 처리';
+          bt.addEventListener('click',()=>{ payOpen=e.id; render() }); box.append(bt);
+        }
+        li.append(box);
+      }
+      ul.append(li);
+    });
+  }
+  function listMsg(t){ const m=$('listMsg'); m.hidden=!t; m.textContent=t||''; m.className='msg err'; if(t) setTimeout(()=>{m.hidden=true},4000) }
+  async function markPaid(e,date){
+    if(!db) return;
+    const up={paidDate:date||today(),updatedAt:Date.now()}; if(e.inExcel) up.paidPending=true;
+    try{ await db.collection('entries').doc(e.id).update(up); payOpen=null; render() }
+    catch(err){ notice('입금 처리를 저장하지 못했어요. 잠시 뒤 다시 해 주세요.') }
+  }
+
+  /* ---------- 엑셀로 옮기기 ---------- */
+  function pending(){ return entries.filter(e=>!e.inExcel).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||((a.createdAt||0)-(b.createdAt||0))) }
+  function renderTransfer(){
+    const p=pending(); $('pendCount').textContent=p.length?'옮길 내역 '+p.length+'건':'모두 옮김 ✔';
+    const fx=entries.filter(e=>e.inExcel&&e.paidPending); const ul=$('fixList'); ul.textContent='';
+    const nI=(cfg&&cfg.newItems)||[], nC=(cfg&&cfg.newCards)||[];
+    $('fixCount').textContent=(fx.length+nI.length+nC.length)?(fx.length+nI.length+nC.length)+'건':'';
+    const cfgTodo=(text,field,name)=>{
+      const li=document.createElement('li'); const sp=document.createElement('span'); sp.textContent=text;
+      const bt=document.createElement('button'); bt.type='button'; bt.className='btn ghost sm'; bt.textContent='추가했어요';
+      bt.addEventListener('click',async()=>{ try{ await db.doc('config/main').update({[field]:((cfg[field])||[]).filter(x=>x!==name)}) }catch(err){ notice('저장하지 못했어요.') } });
+      li.append(sp,bt); ul.append(li);
+    };
+    nC.forEach(n=>cfgTodo('[지출구분목록] 탭 "개인카드" 빈 칸에 「'+n+'」 추가','newCards',n));
+    nI.forEach(n=>cfgTodo('[항목목록] 탭 빈 칸에 「'+n+'」 추가','newItems',n));
+    if(!fx.length&&!nI.length&&!nC.length){ const li=document.createElement('li'); li.className='empty'; li.style.display='block'; li.textContent='없어요'; ul.append(li); return }
+    fx.forEach(e=>{
+      const li=document.createElement('li'); const sp=document.createElement('span');
+      sp.textContent=(e.excelRow?Number((e.date||'').slice(5,7))+'월 탭 '+e.excelRow+'행':'')+' '+(e.desc||e.item||'')+' → 입금일 칸에 '+md(e.paidDate);
+      const bt=document.createElement('button'); bt.type='button'; bt.className='btn ghost sm'; bt.textContent='고쳤어요';
+      bt.addEventListener('click',async()=>{ try{ await db.collection('entries').doc(e.id).update({paidPending:false,updatedAt:Date.now()}) }catch(err){ notice('저장하지 못했어요.') } });
+      li.append(sp,bt); ul.append(li);
+    });
+  }
+  async function copyText(txt,label){
+    const box=$('copyBox'), m=$('copyMsg'); m.hidden=false;
+    if(!txt){ m.className='msg ok'; m.textContent='엑셀로 옮길 새 내역이 없어요.'; box.hidden=true; return }
+    try{ await navigator.clipboard.writeText(txt); m.className='msg ok'; m.textContent=label+' 복사했어요. 엑셀에 붙여 넣으세요.'; box.hidden=true }
+    catch(e){ box.hidden=false; box.value=txt; box.focus(); box.select(); m.className='msg err'; m.textContent='자동 복사가 안 돼요. 아래 칸이 선택돼 있으니 길게 눌러 복사해 주세요.' }
+  }
+  $('copyA').addEventListener('click',()=>copyText(pending().map(e=>[Number((e.date||'').slice(8,10))||'',e.item||'',e.desc||'',Number(e.income)||'',Number(e.expense)||''].join('\t')).join('\n'),'① 일~지출('+pending().length+'건)'));
+  $('copyB').addEventListener('click',()=>copyText(pending().map(e=>[e.account||'',md(e.paidDate)].join('\t')).join('\n'),'② 지출구분·입금일('+pending().length+'건)'));
+  $('markDone').addEventListener('click',()=>{ if(!pending().length){ copyText('',''); return } $('markYes').hidden=false });
+  $('markYes').addEventListener('click',async()=>{
+    $('markYes').hidden=true; const p=pending(); if(!db||!p.length) return;
+    const at=Date.now(), done=[];
+    try{
+      for(const e of p){ await retry(()=>db.collection('entries').doc(e.id).update({inExcel:true,updatedAt:Date.now()})); done.push(e.id) }
+      const m=$('copyMsg'); m.hidden=false; m.className='msg ok'; m.textContent=p.length+'건을 엑셀에 옮긴 것으로 표시했어요. 잘못 눌렀으면 아래 "방금 표시 되돌리기"를 누르세요.' }
+    catch(err){ notice('표시하지 못했어요. 다시 눌러 주세요.') }
+    finally{ if(done.length){ try{ await db.doc('meta/lastTransfer').set({at,ids:done}) }catch(e){} } }
+  });
+
+  /* ---------- 되돌리기 ---------- */
+  const hm=t=>{ const d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()) };
+  function undoTargets(){ const lt=meta.lastTransfer; if(!lt||!Array.isArray(lt.ids)) return [];
+    const ids=new Set(lt.ids); return entries.filter(e=>ids.has(e.id)&&e.inExcel&&!e.excelRow) }
+  function renderUndo(){
+    const t=undoTargets(), b=$('undoT');
+    b.hidden=!t.length; if(!t.length) $('undoTYes').hidden=true;
+    if(t.length) b.textContent='방금 표시 되돌리기 ('+t.length+'건 · '+hm(meta.lastTransfer.at)+')';
+    const li=meta.lastImport, bi=$('undoI');
+    bi.hidden=!li; if(!li) $('undoIYes').hidden=true;
+    if(li){ const [y,m]=String(li.month).split('-').map(Number); bi.textContent='마지막 가져오기 되돌리기 ('+y+'년 '+m+'월 · '+hm(li.at)+')' }
+  }
+  $('undoT').addEventListener('click',()=>{ $('undoTYes').hidden=false });
+  $('undoTYes').addEventListener('click',async()=>{
+    $('undoTYes').hidden=true; const t=undoTargets(); if(!db) return;
+    try{ for(const e of t){ await retry(()=>db.collection('entries').doc(e.id).update({inExcel:false,updatedAt:Date.now()})) }
+      await db.doc('meta/lastTransfer').delete();
+      const m=$('copyMsg'); m.hidden=false; m.className='msg ok'; m.textContent=t.length+'건을 다시 "옮길 내역"으로 되돌렸어요. 엑셀에 붙여 넣은 줄이 있으면 엑셀에서 지워 주세요.' }
+    catch(err){ notice('되돌리지 못했어요. 다시 눌러 주세요.') }
+  });
+  $('undoI').addEventListener('click',()=>{ $('undoIYes').hidden=false });
+  $('undoIYes').addEventListener('click',async()=>{
+    $('undoIYes').hidden=true; const li=meta.lastImport; if(!db||!li) return;
+    const msg=$('undoIMsg'); msg.hidden=false; msg.className='msg ok'; msg.style.whiteSpace='pre-line';
+    const before=li.before||[], keep=new Set(before.map(x=>x.id)), imported=new Set(li.importedIds||[]);
+    const del=entries.filter(e=>imported.has(e.id)&&!keep.has(e.id));
+    const total=before.length+del.length; let n=0;
+    try{
+      for(const x of before){ const body=Object.assign({},x); delete body.id; await retry(()=>db.collection('entries').doc(x.id).set(body)); msg.textContent='되돌리는 중… '+(++n)+' / '+total }
+      for(const e of del){ await retry(()=>db.collection('entries').doc(e.id).delete()); msg.textContent='되돌리는 중… '+(++n)+' / '+total }
+      await db.doc('meta/lastImport').delete();
+      msg.textContent='가져오기 전으로 되돌렸어요 ✔ ('+Number(String(li.month).slice(5,7))+'월 내역 '+before.length+'건)';
+    }catch(err){ msg.className='msg err'; msg.textContent='중간에 멈췄어요('+n+'/'+total+'). 한 번 더 누르면 이어서 되돌려요.' }
+  });
+
+  /* ---------- 가지급 고치기 ---------- */
+  let advDraft=null;
+  function advRowEl(v){
+    const r=document.createElement('div'); r.className='advrow';
+    const t=document.createElement('input'); t.placeholder='내용 (예: 9월 주유비)'; t.value=v.text||''; t.setAttribute('aria-label','가지급 내용');
+    const a=document.createElement('select'); a.setAttribute('aria-label','지급 통장');
+    const p0=document.createElement('option'); p0.value=''; p0.textContent='통장'; a.append(p0);
+    (cfg.accounts||[]).forEach(x=>opt(a,x.name)); a.value=v.account||'';
+    const m=document.createElement('input'); m.inputMode='numeric'; m.placeholder='금액'; m.className='num'; m.setAttribute('aria-label','금액');
+    m.value=Number(v.amount)?Number(v.amount).toLocaleString('ko-KR'):'';
+    m.addEventListener('input',()=>{ const d=m.value.replace(/[^0-9]/g,''); m.value=d?Number(d).toLocaleString('ko-KR'):'' });
+    const x=document.createElement('button'); x.type='button'; x.className='xbtn'; x.textContent='×'; x.setAttribute('aria-label','이 줄 지우기');
+    x.addEventListener('click',()=>r.remove());
+    r.append(t,a,m,x); return r;
+  }
+  function openAdvEdit(){
+    if(!cfg) return; advDraft=true; const box=$('advRows'); box.textContent='';
+    (cfg.advances||[]).forEach(v=>box.append(advRowEl(v)));
+    if(!(cfg.advances||[]).length) box.append(advRowEl({}));
+    $('advView').hidden=true; $('advEditBtnRow').hidden=true; $('advEdit').hidden=false; $('advMsg').hidden=true;
+  }
+  function closeAdvEdit(){ advDraft=null; $('advView').hidden=false; $('advEditBtnRow').hidden=false; $('advEdit').hidden=true }
+  function advMsg(t,ok){ const m=$('advMsg'); m.hidden=!t; m.textContent=t||''; m.className='msg '+(ok?'ok':'err') }
+  $('advEditBtn').addEventListener('click',openAdvEdit);
+  $('advCancel').addEventListener('click',closeAdvEdit);
+  $('advAdd').addEventListener('click',()=>{ const r=advRowEl({}); $('advRows').append(r); r.querySelector('input').focus() });
+  $('advSave').addEventListener('click',async()=>{
+    if(!db) return advMsg('저장소에 연결된 뒤에 고칠 수 있어요.');
+    const list=[]; let bad='';
+    [...$('advRows').children].forEach(r=>{
+      const [t,a,m]=r.querySelectorAll('input,select'); const text=t.value.trim(), account=a.value, amount=Number(m.value.replace(/[^0-9]/g,''))||0;
+      if(!text&&!account&&!amount) return;
+      if(!text) bad='내용이 빈 줄이 있어요.'; else if(!account) bad='「'+text+'」의 지급 통장을 골라 주세요.';
+      list.push({text,account,amount});
+    });
+    if(bad) return advMsg(bad);
+    if(list.length>30) return advMsg('엑셀 가지급 칸이 30줄까지라 더 넣을 수 없어요.');
+    $('advSave').disabled=true;
+    try{ await db.doc('config/main').update({advances:list}); closeAdvEdit(); render() }
+    catch(e){ advMsg('저장하지 못했어요. 잠시 뒤 다시 해 주세요.') }
+    finally{ $('advSave').disabled=false }
+  });
+
+  /* ---------- 엑셀에서 가져오기 ---------- */
+  // 엑셀 복사 내용(탭 구분, 줄바꿈 들어간 칸은 따옴표로 감쌈)을 칸 단위로 나눔
+  function parseTSV(text){
+    const rows=[]; let row=[], cell='', i=0, q=false;
+    text=String(text||'').replace(/\r\n?/g,'\n');
+    while(i<text.length){
+      const ch=text[i];
+      if(q){ if(ch==='"'){ if(text[i+1]==='"'){cell+='"';i+=2;continue} q=false; i++; continue } cell+=ch; i++; continue }
+      if(ch==='"'&&cell===''){ q=true; i++; continue }
+      if(ch==='\t'){ row.push(cell); cell=''; i++; continue }
+      if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; i++; continue }
+      cell+=ch; i++;
+    }
+    if(cell!==''||row.length){ row.push(cell); rows.push(row) }
+    return rows;
+  }
+  const toNum=s=>{ s=String(s||'').replace(/[\s,원₩]/g,''); if(!s||s==='-') return 0; let neg=false;
+    if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1)} if(s.startsWith('-')||s.startsWith('−')){neg=true;s=s.slice(1)} const n=Number(s); return isNaN(n)?NaN:(neg?-n:n) };
+  const isInt=(s,lo,hi)=>{ const t=String(s||'').trim(); if(!/^\d+$/.test(t)) return false; const n=Number(t); return n>=lo&&n<=hi };
+  function parsePaid(s,y,m){
+    s=String(s||'').trim(); if(!s) return '';
+    let mm,dd,yy=y; let r=s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+    if(r){ yy=+r[1]; mm=+r[2]; dd=+r[3] } else { r=s.match(/^(\d{1,2})\s*[\/.월-]\s*(\d{1,2})/); if(!r) return null; mm=+r[1]; dd=+r[2]; if(mm<m-6) yy=y+1 }
+    if(!(mm>=1&&mm<=12&&dd>=1&&dd<=31)) return null;
+    return yy+'-'+pad(mm)+'-'+pad(dd);
+  }
+  function buildImport(text,y,m){
+    const out=[], warn={otherMonth:0,badPaid:0,badAmt:0,acct:new Set(),item:new Set()}; let skipped=0;
+    const accts=new Set((cfg.accounts||[]).map(a=>a.name)), cards=new Set((cfg.cards||[]).map(c=>c.name)), items=new Set(cfg.items||[]);
+    parseTSV(text).forEach(f=>{
+      if(f.every(x=>!String(x).trim())) return;
+      let o, no=null;   // 시작 열: A(No.)부터 복사했으면 1칸 밀림
+      if(isInt(f[0],1,9999)&&(!String(f[1]||'').trim()||isInt(f[1],1,12))&&isInt(f[2],1,31)){ o=1; no=+f[0] }
+      else if((!String(f[0]||'').trim()||isInt(f[0],1,12))&&isInt(f[1],1,31)){ o=0 }
+      else { skipped++; return }
+      const mon=String(f[o]||'').trim(), day=+String(f[o+1]).trim();
+      const inc=toNum(f[o+4]), exp=toNum(f[o+5]);
+      if(isNaN(inc)||isNaN(exp)){ warn.badAmt++; return }
+      if(!inc&&!exp){ skipped++; return }
+      if(mon&&+mon!==m){ warn.otherMonth++; return }
+      const item=String(f[o+2]||'').trim(), desc=String(f[o+3]||'').trim(), account=String(f[o+7]||'').trim();
+      let paid=parsePaid(f[o+8],y,m); if(paid===null){ warn.badPaid++; paid='' }
+      if(account&&!accts.has(account)&&!cards.has(account)) warn.acct.add(account);
+      if(item&&exp&&!items.has(item)) warn.item.add(item);
+      out.push({date:y+'-'+pad(m)+'-'+pad(day),item,desc,income:inc,expense:exp,account,paidDate:cards.has(account)?paid:'',excelRow:no!=null?no+9:null});
+    });
+    return {rows:out,skipped,warn};
+  }
+  const sigOf=e=>[e.date,Number(e.income||0),Number(e.expense||0),e.account||'',e.item||''].join('|');
+  let impPlan=null;
+  function planImport(){
+    const [y,m]=month.split('-').map(Number);
+    const r=buildImport($('impBox').value,y,m);
+    const existing=entries.filter(e=>(e.date||'').slice(0,7)===month);
+    const oldExcel=existing.filter(e=>e.inExcel), pend=existing.filter(e=>!e.inExcel);
+    const ym=y+pad(m), used=new Set(), oldUsed=new Set();
+    const rows=r.rows.map((n,i)=>{
+      // 이미 있는 같은 내역이면 그 문서를 그대로 써서 다시 저장하지 않음
+      const old=oldExcel.find(o=>!oldUsed.has(o.id)&&((n.excelRow&&o.excelRow===n.excelRow&&sigOf(o)===sigOf(n))||(sigOf(o)===sigOf(n)&&(o.desc||'')===n.desc)));
+      if(old) oldUsed.add(old.id);
+      if(old&&!n.excelRow&&old.excelRow) n.excelRow=old.excelRow;
+      const id=old?old.id:ym+'-'+(n.excelRow?'r'+n.excelRow:'n'+(i+1))+'-'+Date.now().toString(36);
+      const body=Object.assign({},n,{inExcel:true,updatedAt:Date.now(),createdAt:old&&old.createdAt||Date.now()+i});
+      if(old&&old.paidPending&&!n.paidDate&&old.paidDate){ body.paidDate=old.paidDate; body.paidPending=true }
+      return {id,body};
+    });
+    const merged=[]; pend.forEach(p=>{ const k=rows.findIndex((x,j)=>!used.has(j)&&sigOf(x.body)===sigOf(p)); if(k>=0){ used.add(k); merged.push(p) } });
+    const newIds=new Set(rows.map(x=>x.id));
+    const del=[...oldExcel.filter(o=>!newIds.has(o.id)), ...merged];
+    impPlan={rows,del,addItems:[...r.warn.item].filter(Boolean)};
+    const inc=r.rows.reduce((s,e)=>s+e.income,0), exp=r.rows.reduce((s,e)=>s+e.expense,0);
+    const lines=['가져올 거래 '+r.rows.length+'줄 · 수입 '+won(inc)+' · 지출 '+won(exp),
+      '→ 엑셀 이 달 탭의 "이번 달 합계" 줄(수입·지출)과 같은지 확인하세요.'];
+    if(merged.length) lines.push('핸드폰에서 적은 내역 '+merged.length+'건은 엑셀에도 있어서 하나로 합쳐요.');
+    const keep=pend.length-merged.length; if(keep) lines.push('핸드폰에만 있는 내역 '+keep+'건은 그대로 남겨요(아직 엑셀에 안 옮긴 것).');
+    if(r.warn.acct.size) lines.push('⚠ 목록에 없는 지출구분: '+[...r.warn.acct].join(', ')+' (통장별 잔액에서 빠져요)');
+    if(r.warn.item.size) lines.push('목록에 없는 항목은 항목 목록에 추가할게요: '+[...r.warn.item].join(', '));
+    if(r.warn.otherMonth) lines.push('⚠ 다른 달 줄 '+r.warn.otherMonth+'개는 건너뛰었어요. 위에서 달을 바꿔 그 달 탭으로 따로 가져오세요.');
+    if(r.warn.badPaid) lines.push('⚠ 입금일을 읽지 못한 줄 '+r.warn.badPaid+'개는 입금일 없이 가져와요.');
+    if(r.warn.badAmt) lines.push('⚠ 금액을 읽지 못한 줄 '+r.warn.badAmt+'개는 건너뛰었어요.');
+    const res=$('impResult'); res.hidden=false; res.style.whiteSpace='pre-line';
+    if(!r.rows.length){ res.className='msg err'; res.textContent='가져올 거래 줄을 찾지 못했어요. A열(No.)부터 J열(입금일)까지 복사했는지 확인해 주세요.'; $('impGo').hidden=true; impPlan=null; return }
+    res.className='msg ok'; res.textContent=lines.join('\n'); $('impGo').hidden=false; $('impYes').hidden=true;
+  }
+  async function retry(fn){ for(let k=0;k<4;k++){ try{ return await fn() }catch(e){ if(!(e&&(e.code==='resource_exhausted'||e.code==='unavailable'))||k===3) throw e; await new Promise(r=>setTimeout(r,800*(k+1)+Math.random()*400)) } } }
+  async function runImport(){
+    if(!db||!impPlan) return; const p=impPlan; impPlan=null; $('impGo').hidden=true; $('impYes').hidden=true;
+    const res=$('impResult'); res.className='msg ok'; const total=p.rows.length+p.del.length; let done=0;
+    const tick=()=>{ res.textContent='맞추는 중… '+(++done)+' / '+total+' (창을 닫지 마세요)' };
+    try{
+      if(!p.snap){
+        const ex=entries.filter(e=>(e.date||'').slice(0,7)===month).map(e=>Object.assign({},e));
+        await retry(()=>db.doc('meta/lastImport').set({month,at:Date.now(),before:ex,importedIds:p.rows.map(x=>x.id)})); p.snap=true;
+      }
+      if(p.addItems.length){ const items=[...(cfg.items||[])]; p.addItems.forEach(n=>{ if(!items.includes(n)&&items.length<24) items.push(n) }); await retry(()=>db.doc('config/main').update({items})) }
+      const byId=new Map(entries.map(e=>[e.id,e]));
+      for(const x of p.rows){
+        const cur=byId.get(x.id), same=cur&&cur.inExcel&&['date','item','desc','income','expense','account','paidDate','excelRow'].every(k=>String(cur[k]??'')===String(x.body[k]??''))&&!!cur.paidPending===!!x.body.paidPending;
+        if(!same) await retry(()=>db.collection('entries').doc(x.id).set(x.body)); tick();
+      }
+      for(const o of p.del){ await retry(()=>db.collection('entries').doc(o.id).delete()); tick() }
+      res.textContent='엑셀과 맞췄어요 ✔ 거래 '+p.rows.length+'줄. 맨 위 잔여예산이 엑셀과 같은지 확인해 보세요. 잘못 맞췄으면 아래 "마지막 가져오기 되돌리기"를 누르세요.'; $('impBox').value='';
+    }catch(e){ res.className='msg err'; res.textContent='중간에 멈췄어요('+done+'/'+total+'). 같은 내용으로 다시 맞추기를 누르면 이어서 맞춰져요.'; $('impGo').hidden=false; impPlan=p }
+  }
+  $('impPreview').addEventListener('click',()=>{ if(!cfg) return; planImport() });
+  $('impClear').addEventListener('click',()=>{ $('impBox').value=''; $('impResult').hidden=true; $('impGo').hidden=true; $('impYes').hidden=true; impPlan=null });
+  $('impGo').addEventListener('click',()=>{ $('impYes').hidden=false });
+  $('impYes').addEventListener('click',runImport);
+  $('impBox').addEventListener('input',()=>{ $('impGo').hidden=true; $('impYes').hidden=true; impPlan=null });
+
+  /* ---------- 현금 ---------- */
+  function renderCash(c){
+    const wrap=$('cashRows');
+    if(!wrap.childElementCount){
+      DENOMS.forEach(dn=>{
+        const r=document.createElement('div'); r.className='cashrow';
+        const a=document.createElement('div'); a.className='dn num'; a.textContent=dn.toLocaleString('ko-KR')+'원';
+        const i=document.createElement('input'); i.id='cnt-'+dn; i.inputMode='numeric'; i.placeholder='0'; i.className='num'; i.setAttribute('aria-label',dn+'원 수량');
+        const s=document.createElement('div'); s.className='sum num'; s.id='sum-'+dn;
+        i.addEventListener('input',()=>{ i.value=i.value.replace(/[^0-9]/g,''); cash.counts[dn]=i.value===''?null:Number(i.value); paintCash(); queueCashSave() });
+        r.append(a,i,s); wrap.append(r);
+      });
+    }
+    DENOMS.forEach(dn=>{ const i=$('cnt-'+dn); if(document.activeElement!==i){ const v=cash.counts&&cash.counts[dn]; i.value=(v===null||v===undefined)?'':v } });
+    paintCash();
+  }
+  function paintCash(){
+    const c=calc(); let tot=0, any=false;
+    DENOMS.forEach(dn=>{ const v=Number((cash.counts||{})[dn]||0); if((cash.counts||{})[dn]!=null) any=true; tot+=v*dn; $('sum-'+dn).textContent=v?won(v*dn):'' });
+    $('cTotal').textContent=won(tot);
+    const name=(cfg&&cfg.cashAccount)||'현금';
+    const bk=c&&(name in c.book)?c.book[name]-(c.adv[name]||0)+(name===c.pay?c.unpaid:0):null;
+    $('cBook').textContent=bk==null?'목록에 "'+name+'" 없음':won(bk);
+    const st=$('cStatus');
+    if(!any||!tot){ $('cDiff').textContent='—'; st.textContent='수량을 입력하세요'; st.className='status'; return }
+    const diff=tot-(bk||0); $('cDiff').textContent=signed(diff);
+    if(diff===0){ st.textContent='✔ 장부와 일치'; st.className='status b-good' }
+    else { st.textContent='⚠ '+Math.abs(diff).toLocaleString('ko-KR')+'원 '+(diff<0?'부족':'많음'); st.className='status b-bad' }
+  }
+  let cashTimer=null;
+  function queueCashSave(){ clearTimeout(cashTimer); cashTimer=setTimeout(async()=>{ if(!db) return; try{ await db.doc('cash/current').set({counts:cash.counts,updatedAt:Date.now()}) }catch(e){ notice('현금 수량을 저장하지 못했어요. 잠시 뒤 다시 입력해 주세요.') } },700) }
+  $('cashReset').addEventListener('click',()=>{ $('cashResetYes').hidden=false });
+  $('cashResetYes').addEventListener('click',()=>{ cash.counts={}; $('cashResetYes').hidden=true; DENOMS.forEach(dn=>$('cnt-'+dn).value=''); paintCash(); queueCashSave() });
+
+  /* ---------- 입력 폼 ---------- */
+  function opt(parent,v){const o=document.createElement('option');o.value=o.textContent=v;parent.append(o)}
+  function fillSelects(){
+    if(!cfg) return;
+    const it=$('fItem'), cur=it.value; it.textContent='';
+    const ph=document.createElement('option'); ph.value=''; ph.textContent=kind==='inc'?'(선택 안 해도 돼요)':'항목 선택'; it.append(ph);
+    (cfg.items||[]).forEach(n=>opt(it,n)); it.value=cur;
+    const ac=$('fAcct'), curA=ac.value; ac.textContent='';
+    const p2=document.createElement('option'); p2.value=''; p2.textContent='선택'; ac.append(p2);
+    const g1=document.createElement('optgroup'); g1.label='통장·현금'; (cfg.accounts||[]).forEach(a=>opt(g1,a.name)); ac.append(g1);
+    if(kind==='exp'&&(cfg.cards||[]).length){const g2=document.createElement('optgroup'); g2.label='개인카드 (쓴 사람)'; cfg.cards.forEach(cd=>opt(g2,cd.name)); ac.append(g2)}
+    ac.value=curA;
+    if(selectAfter.item&&(cfg.items||[]).includes(selectAfter.item)){ it.value=selectAfter.item; delete selectAfter.item }
+    if(selectAfter.card&&kind==='exp'&&(cfg.cards||[]).some(c=>c.name===selectAfter.card)){ ac.value=selectAfter.card; delete selectAfter.card }
+    $('addCardBtn').hidden=kind!=='exp'; if(kind!=='exp') $('addCardBox').hidden=true;
+    togglePaid();
+  }
+  /* 목록에 사람·항목 추가 (엑셀에도 같은 이름을 넣도록 "엑셀에서 고칠 것"에 표시) */
+  let selectAfter={};
+  function toggleBox(id,show){ $(id).hidden=!show; if(show) $(id).querySelector('input').focus() }
+  $('addItemBtn').addEventListener('click',()=>toggleBox('addItemBox',$('addItemBox').hidden));
+  $('addCardBtn').addEventListener('click',()=>toggleBox('addCardBox',$('addCardBox').hidden));
+  $('addItemCancel').addEventListener('click',()=>{ $('newItem').value=''; toggleBox('addItemBox',false) });
+  $('addCardCancel').addEventListener('click',()=>{ $('newCard').value=''; toggleBox('addCardBox',false) });
+  async function addToList(type){
+    if(!db||!cfg) return formMsg('저장소에 연결된 뒤에 추가할 수 있어요.');
+    const inp=type==='item'?$('newItem'):$('newCard'); const name=inp.value.trim();
+    if(!name) return formMsg(type==='item'?'새 항목 이름을 적어 주세요.':'이름을 적어 주세요.');
+    const items=cfg.items||[], cards=cfg.cards||[], accts=(cfg.accounts||[]).map(a=>a.name);
+    let up;
+    if(type==='item'){
+      if(items.includes(name)) return formMsg('「'+name+'」은(는) 이미 항목 목록에 있어요.');
+      if(items.length>=24) return formMsg('엑셀 항목 목록이 24개까지라 더 추가할 수 없어요.');
+      up={items:[...items,name], newItems:[...(cfg.newItems||[]),name]};
+    } else {
+      if(cards.some(c=>c.name===name)||accts.includes(name)) return formMsg('「'+name+'」은(는) 이미 목록에 있어요.');
+      if(cards.length>=12) return formMsg('엑셀 개인카드 칸이 12명까지라 더 추가할 수 없어요.');
+      up={cards:[...cards,{name,start:0}], newCards:[...(cfg.newCards||[]),name]};
+    }
+    try{ await db.doc('config/main').update(up); selectAfter[type]=name; inp.value=''; toggleBox(type==='item'?'addItemBox':'addCardBox',false);
+      formMsg('「'+name+'」을(를) 추가했어요. 엑셀 목록에도 넣어 주세요("엑셀에서 고칠 것"에 적어 뒀어요).',true) }
+    catch(e){ formMsg('추가하지 못했어요. 잠시 뒤 다시 해 주세요.') }
+  }
+  $('addItemSave').addEventListener('click',()=>addToList('item'));
+  $('addCardSave').addEventListener('click',()=>addToList('card'));
+
+  function setKind(k){ kind=k; $('kindExp').setAttribute('aria-pressed',k==='exp'); $('kindInc').setAttribute('aria-pressed',k==='inc');
+    $('acctLabel').textContent=k==='exp'?'지출구분 (통장·현금 또는 개인카드 쓴 사람)':'들어온 곳'; fillSelects() }
+  function togglePaid(){ const isCard=cfg&&(cfg.cards||[]).some(c=>c.name===$('fAcct').value); $('paidWrap').hidden=!(kind==='exp'&&isCard) }
+  $('kindExp').addEventListener('click',()=>setKind('exp'));
+  $('kindInc').addEventListener('click',()=>setKind('inc'));
+  $('fAcct').addEventListener('change',togglePaid);
+  $('fAmt').addEventListener('input',e=>{ const v=e.target.value.replace(/[^0-9]/g,''); e.target.value=v?Number(v).toLocaleString('ko-KR'):'' });
+  function formMsg(t,ok){ const m=$('formMsg'); m.hidden=!t; m.textContent=t||''; m.className='msg '+(ok?'ok':'err') }
+  function resetForm(){ editingId=null; $('fDate').value=today(); $('fAmt').value=''; $('fDesc').value=''; $('fItem').value=''; $('fAcct').value=''; $('fPaid').value='';
+    $('formTitle').textContent='새 내역 적기'; $('saveBtn').textContent='저장'; $('cancelEdit').hidden=true; $('delRow').hidden=true; $('delYes').hidden=true; togglePaid() }
+  function startEdit(e){
+    showTab('entry'); setKind(Number(e.income)?'inc':'exp'); editingId=e.id;
+    $('fDate').value=e.date||today(); const amt=Number(e.income)||Number(e.expense)||0; $('fAmt').value=amt?amt.toLocaleString('ko-KR'):'';
+    $('fItem').value=e.item||''; $('fDesc').value=e.desc||''; $('fAcct').value=e.account||''; $('fPaid').value=e.paidDate||''; togglePaid();
+    $('formTitle').textContent='내역 고치기'; $('saveBtn').textContent='고친 내용 저장'; $('cancelEdit').hidden=false; $('delRow').hidden=false; formMsg('');
+    $('formCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  $('cancelEdit').addEventListener('click',()=>{ resetForm(); formMsg('') });
+  $('delBtn').addEventListener('click',()=>{ $('delYes').hidden=false });
+  $('delYes').addEventListener('click',async()=>{ if(!db||!editingId) return;
+    try{ await db.collection('entries').doc(editingId).delete(); resetForm(); formMsg('삭제했어요.',true) }catch(e){ formMsg('삭제하지 못했어요. 잠시 뒤 다시 해 주세요.') } });
+  $('entryForm').addEventListener('submit',async ev=>{
+    ev.preventDefault(); if(!db){ formMsg('저장 기능을 쓸 수 없는 화면이에요. 로그인한 상태로 열어 주세요.'); return }
+    const amt=Number($('fAmt').value.replace(/[^0-9]/g,''));
+    const date=$('fDate').value, item=$('fItem').value, acct=$('fAcct').value;
+    if(!date) return formMsg('날짜를 골라 주세요.');
+    if(!amt) return formMsg('금액을 적어 주세요.');
+    if(kind==='exp'&&!item) return formMsg('항목을 골라 주세요.');
+    if(!acct) return formMsg(kind==='exp'?'돈이 나간 통장이나 개인카드 쓴 사람을 골라 주세요.':'돈이 들어온 통장을 골라 주세요.');
+    const isCard=(cfg.cards||[]).some(c=>c.name===acct);
+    const body={date,item:item||'',desc:$('fDesc').value.trim(),income:kind==='inc'?amt:0,expense:kind==='exp'?amt:0,account:acct,
+      paidDate:(kind==='exp'&&isCard)?($('fPaid').value||''):'', inExcel:false, updatedAt:Date.now()};
+    $('saveBtn').disabled=true;
+    try{
+      if(editingId){ const old=entries.find(x=>x.id===editingId)||{}; body.createdAt=old.createdAt||Date.now(); await db.collection('entries').doc(editingId).set(body) }
+      else { body.createdAt=Date.now(); await db.collection('entries').add(body) }
+      month=date.slice(0,7); const was=editingId; resetForm(); formMsg(was?'고쳤어요.':'저장했어요. 엑셀로 옮길 내역에 추가됐어요.',true); render();
+    }catch(e){ formMsg(e&&e.code==='invalid_argument'?'이 화면에서는 저장 권한이 없어요.':'저장하지 못했어요. 잠시 뒤 다시 해 주세요.') }
+    finally{ $('saveBtn').disabled=false }
+  });
+
+  /* ---------- 탭·달 ---------- */
+  function showTab(t){ if(!['check','entry','cash','help'].includes(t)) t='check'; ['check','entry','cash','help'].forEach(k=>{ $('tab-'+k).setAttribute('aria-selected',k===t); $('view-'+k).hidden=k!==t });
+    try{ localStorage.setItem('ledger.tab',t) }catch(e){} }
+  ['check','entry','cash','help'].forEach(k=>$('tab-'+k).addEventListener('click',()=>showTab(k)));
+  $('fabExp').addEventListener('click',()=>{ showTab('entry'); resetForm(); setKind('exp'); formMsg(''); $('fAmt').focus() });
+  $('fabInc').addEventListener('click',()=>{ showTab('entry'); resetForm(); setKind('inc'); formMsg(''); $('fAmt').focus() });
+  function shift(n){ const [y,m]=month.split('-').map(Number); const d=new Date(y,m-1+n,1); month=d.getFullYear()+'-'+pad(d.getMonth()+1); payOpen=null; render() }
+  $('mPrev').addEventListener('click',()=>shift(-1)); $('mNext').addEventListener('click',()=>shift(1));
+  function notice(t){ const n=$('dbNotice'); n.hidden=!t; n.textContent=t||'' }
+
+
+  /* ---------- 앱 전용: 처음 시작(백업 불러오기)·백업 저장·로그아웃 ---------- */
+  function setupMsg(t,ok){ const m=$('setupMsg'); m.hidden=!t; m.textContent=t||''; m.className='msg '+(ok?'ok':'err') }
+  $('setupFile').addEventListener('change',async ev=>{
+    const f=ev.target.files&&ev.target.files[0]; ev.target.value=''; if(!f||!db) return;
+    let data; try{ data=JSON.parse(await f.text()) }catch(e){ return setupMsg('파일을 읽지 못했어요. 백업 파일(.json)이 맞는지 확인해 주세요.') }
+    const conf=data&&data.config, list=data&&data.entries;
+    if(!conf||!Array.isArray(conf.accounts)||!Array.isArray(list)) return setupMsg('장부 백업 파일이 아니에요. "백업 파일 저장"으로 만든 파일을 골라 주세요.');
+    if(cfg) return setupMsg('이미 장부가 있어요. 덮어쓰지 않았어요.');
+    try{
+      let n=0; const total=list.length;
+      for(const e of list){ const b=Object.assign({},e); const id=String(b.id||''); delete b.id; if(!id) continue;
+        await retry(()=>db.collection('entries').doc(id).set(b)); setupMsg('불러오는 중… '+(++n)+' / '+total,true) }
+      if(data.cash&&data.cash.counts) await retry(()=>db.doc('cash/current').set(data.cash));
+      await retry(()=>db.doc('config/main').set(conf));
+      setupMsg('불러왔어요 ✔ 내역 '+n+'건. 맨 위 잔여예산이 엑셀과 같은지 확인해 보세요.',true);
+    }catch(e){ setupMsg('중간에 멈췄어요. 같은 파일을 다시 고르면 이어서 불러와요.') }
+  });
+  $('backupBtn').addEventListener('click',()=>{
+    const m=$('backupMsg'); m.hidden=false;
+    if(!cfg){ m.className='msg err'; m.textContent='아직 저장할 장부가 없어요.'; return }
+    const d=new Date(), stamp=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+    const data={app:'activity-ledger',version:1,exportedAt:d.toISOString(),config:cfg,
+      entries:entries.map(e=>Object.assign({},e)),cash:{counts:cash.counts||{}}};
+    const blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='활동비장부_백업_'+stamp+'.json';
+    document.body.append(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+    m.className='msg ok'; m.textContent='백업 파일을 저장했어요(내역 '+entries.length+'건). 다운로드 폴더를 확인하세요.';
+  });
+  $('logoutBtn').addEventListener('click',()=>{ if(window.ledgerLogout) window.ledgerLogout() });
+
+  /* ---------- 시작 ---------- */
+  try{ const t=localStorage.getItem('ledger.tab'); if(t) showTab(t) }catch(e){}
+  $('fDate').value=today(); render();
+  (async()=>{
+    db=await window.ledgerReady;
+    if(!db){ notice('저장소에 연결할 수 없어요. 인터넷 연결을 확인하고 새로고침해 주세요.'); emptyRow($('acctBody'),4,'연결되면 통장별 잔액이 보여요.'); return }
+    $('whoami').textContent=(window.ledgerUser||'')+' 로 로그인됨';
+    db.doc('config/main').onSnapshot(s=>{ cfg=s.exists?s.data():null;
+      $('setupCard').hidden=!!cfg;
+      if(!cfg){ notice(''); return } notice(''); fillSelects(); render() },
+      ()=>notice('설정을 불러오지 못했어요. 새로고침해 주세요.'));
+    db.collection('entries').onSnapshot(s=>{ entries=s.docs.map(d=>Object.assign({id:d.id},d.data())); render() },
+      ()=>notice('내역을 불러오지 못했어요. 새로고침해 주세요.'));
+    db.collection('meta').onSnapshot(s=>{ meta={}; s.docs.forEach(d=>{ meta[d.id]=d.data() }); renderUndo() },()=>{});
+    db.doc('cash/current').onSnapshot(s=>{ const d=s.exists?s.data():null; cash={counts:Object.assign({},(d&&d.counts)||{})}; if(cfg) renderCash(calc()) },()=>{});
+  })();
+})();
+</script>
+
+<script type="module">
+// Firebase 연결 + 로그인 잠금. 화면 코드는 db.doc()/db.collection() 형태만 씀 (아래 어댑터).
+const SDK='https://www.gstatic.com/firebasejs/10.12.2/';
+const gate=document.getElementById('gate'), gMsg=document.getElementById('gateMsg'),
+      gLogin=document.getElementById('gLogin'), gLogout=document.getElementById('gLogout');
+const say=(t,login,logout)=>{ gate.hidden=false; gMsg.textContent=t; gLogin.hidden=!login; gLogout.hidden=!logout };
+const norm=e=>{ try{ if(e&&e.code) e.code=String(e.code).replace(/^firestore\//,'').replace(/-/g,'_') }catch(_){} return e };
+async function start(){
+  if(window.__TEST_DB){ window.ledgerUser='test@example.com'; gate.hidden=true; window.__ledgerResolve(window.__TEST_DB); return }
+  const C=window.LEDGER_CONFIG||{};
+  if(!C.firebase||!C.firebase.apiKey){ say('설정 파일(config.js)이 아직 비어 있어요.'); window.__ledgerResolve(null); return }
+  let A,F,au,fs;
+  try{
+    const app=(await import(SDK+'firebase-app.js')).initializeApp(C.firebase);
+    A=await import(SDK+'firebase-auth.js'); F=await import(SDK+'firebase-firestore.js');
+    au=A.getAuth(app); au.languageCode='ko';
+    fs=F.initializeFirestore(app,{ignoreUndefinedProperties:true});
+  }catch(e){ say('인터넷에 연결되지 않았거나 서버에 닿지 않아요. 연결을 확인하고 새로고침해 주세요.'); window.__ledgerResolve(null); return }
+  const P=p=>p.catch(e=>{ throw norm(e) });
+  const snapD=s=>({exists:s.exists(),id:s.id,data:()=>s.data()});
+  const dref=path=>{ const r=F.doc(fs,path); return {
+    onSnapshot:(cb,err)=>F.onSnapshot(r,s=>cb(snapD(s)),e=>{ if(err) err(norm(e)) }),
+    get:()=>P(F.getDoc(r)).then(snapD),
+    set:b=>P(F.setDoc(r,b)), update:b=>P(F.updateDoc(r,b)), delete:()=>P(F.deleteDoc(r)) } };
+  const cref=name=>{ const c=F.collection(fs,name); return {
+    doc:id=>dref(name+'/'+id),
+    onSnapshot:(cb,err)=>F.onSnapshot(c,s=>cb({docs:s.docs.map(d=>({id:d.id,data:()=>d.data()}))}),e=>{ if(err) err(norm(e)) }),
+    add:b=>P(F.addDoc(c,b)).then(r=>({id:r.id})) } };
+  const db={doc:dref,collection:cref};
+  const provider=new A.GoogleAuthProvider(); provider.setCustomParameters({prompt:'select_account'});
+  window.ledgerLogout=()=>A.signOut(au).then(()=>location.reload());
+  gLogin.addEventListener('click',async()=>{
+    gMsg.textContent='로그인 창을 여는 중…';
+    try{ await A.signInWithPopup(au,provider) }
+    catch(e){
+      if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/cancelled-popup-request'].includes(e.code)){ try{ await A.signInWithRedirect(au,provider) }catch(e2){ say('로그인하지 못했어요('+(e2.code||'')+'). 다시 눌러 주세요.',true) } }
+      else if(e.code==='auth/popup-closed-by-user'){ say('로그인 창이 닫혔어요. 다시 눌러 주세요.',true) }
+      else if(e.code==='auth/unauthorized-domain'){ say('이 주소가 Firebase 로그인 허용 목록에 없어요. Authentication → 설정 → 승인된 도메인에 추가해 주세요.',true) }
+      else say('로그인하지 못했어요('+(e.code||'오류')+'). 다시 눌러 주세요.',true);
+    }
+  });
+  gLogout.addEventListener('click',()=>A.signOut(au));
+  A.getRedirectResult(au).catch(e=>say('로그인하지 못했어요('+(e.code||'')+'). 다시 눌러 주세요.',true));
+  let ready=false;
+  // 누가 열 수 있는지는 Firebase 보안 규칙이 정해요(코드에 이메일을 두지 않음). 읽기가 거부되면 허락 안 된 계정.
+  A.onAuthStateChanged(au,async u=>{
+    if(ready){ if(!u) location.reload(); return }
+    if(!u){ say('허락된 구글 계정으로 로그인해 주세요.',true); return }
+    const em=String(u.email||'').toLowerCase();
+    say('장부를 여는 중…');
+    try{ await db.doc('config/main').get() }
+    catch(e){
+      if(e.code==='permission_denied'){ say(em+' 계정은 이 장부를 열 수 없어요. 허락된 계정으로 다시 로그인해 주세요.',false,true) }
+      else say('장부 서버에 닿지 않아요('+(e.code||'')+'). 인터넷 연결을 확인하고 새로고침해 주세요.',false,true);
+      return }
+    ready=true; window.ledgerUser=em; gate.hidden=true; window.__ledgerResolve(db);
+  });
+}
+start();
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
